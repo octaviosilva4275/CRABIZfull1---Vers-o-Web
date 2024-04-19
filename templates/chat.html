@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whatsapp</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="leftSide">
+      <div class="header">
+        <div class="userimg">
+          <img src="{{ url_for('static', filename='perfil.png') }}" alt="User" class="cover">
+        </div>
+        <ul class="nav_icons">
+          <li><ion-icon name="scan-circle-outline"></ion-icon></li>
+          <li><ion-icon name="chatbox"></ion-icon></li>
+          <li><ion-icon name="ellipsis-vertical"></ion-icon></li>
+        </ul>
+      </div>
+      <div class="search_chat">
+        <div>
+          <input type="text" placeholder="Search">
+          <ion-icon name="search-outline"></ion-icon>
+        </div>
+      </div>
+      <div class="chatlist">
+        {% for contato in contatos %}
+        <div class="block active" onclick="selecionarECarregarMensagens('{{ contato.nome }}')">
+          <div class="imgbx">
+            <img src="{{ url_for('static', filename='perfil.png') }}" class="cover" alt="">
+          </div>
+          <div class="details">
+            <div class="listHead">
+              <h4>{{ contato.nome }}</h4>
+              <p class="time">10:50</p>
+            </div>
+            <div class="message_p">
+              <p>Teste Whatsapp</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="rightSide">
+      <div class="header">
+        <div class="imgText">
+          <div class="userimg">
+            <img src="{{ url_for('static', filename='perfil.png') }}" alt="User" class="cover">
+          </div>
+          <h4 id="nomeDestinatario">User 01 <br><span>Online</span></h4>
+        </div>
+        <ul class="nav_icons">
+          <li><ion-icon name="search-outline"></ion-icon></li>
+          <li><ion-icon name="ellipsis-vertical"></ion-icon></li>
+        </ul>
+      </div>
+      <div class="chatBox" id="chatBox">
+        <!-- Aqui serão exibidas as mensagens -->
+      </div>
+      <form id="formEnviarMensagem" action="/enviar" method="post">
+        <div class="chatbox_input">
+          <input type="text" placeholder="Digite uma mensagem" id="mensagemInput" name="mensagem" required>
+          <select id="destinatarioSelect" name="destinatario" required>
+            <option value="">Selecione o destinatário</option>
+            {% for contato in contatos %}
+            <option value="{{ contato.nome }}">{{ contato.nome }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" onclick="enviarMensagem()"><ion-icon name="send"></ion-icon></button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    function selecionarECarregarMensagens(nomeContato) {
+      document.getElementById("nomeDestinatario").innerText = nomeContato;
+      // Defina o nome do contato como o valor do destinatário no campo de seleção
+      document.getElementById("destinatarioSelect").value = nomeContato;
+      
+    
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+            var mensagens = JSON.parse(xhr.responseText);
+            var chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = '';
+            mensagens.forEach(function(mensagem) {
+              var messageDiv = document.createElement("div");
+              messageDiv.className = "message";
+              var messageType = mensagem.remetente === "{{ session.usuario.nome }}" ? "my_message" : "frnd_message"; // Aqui é onde fazemos a distinção
+              messageDiv.classList.add(messageType);
+              messageDiv.innerHTML = `
+                <div>
+                  <p>${mensagem.mensagem}
+                  <span>Enviado por: <b>${mensagem.nome}</b></span>
+                    </p>
+                </div>
+              `;
+              chatBox.appendChild(messageDiv);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+          }
+        }
+      };
+      xhr.open("GET", "/mensagens?contato=" + encodeURIComponent(nomeContato), true);
+      xhr.send();
+    }
+    
+    // Função para enviar mensagem quando o botão é clicado
+    function enviarMensagem() {
+      var destinatario = document.getElementById("destinatarioSelect").value;
+      var mensagem = document.getElementById("mensagemInput").value;
+    
+      if (mensagem.trim() === "" || destinatario === "") {
+        alert("Por favor, preencha todos os campos antes de enviar a mensagem.");
+        return;
+      }
+    
+      var data = {
+        "destinatario": destinatario,
+        "mensagem": mensagem
+      };
+    
+      // Montar a requisição AJAX
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/enviar", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+    
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          // Ação a ser realizada em caso de sucesso, como atualizar as mensagens
+          console.log("Mensagem enviada com sucesso!");
+          // Você pode adicionar aqui alguma ação após o envio bem-sucedido, como limpar o campo de mensagem
+        } else {
+          // Ação a ser realizada em caso de erro, como exibir uma mensagem de alerta
+          console.error("Erro ao enviar mensagem: " + xhr.statusText);
+          alert("Erro ao enviar mensagem: " + xhr.statusText);
+        }
+      };
+    
+      // Converter o objeto JavaScript em JSON e enviar
+      xhr.send(JSON.stringify(data));
+    }
+    </script>
+    
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>
